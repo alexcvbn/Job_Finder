@@ -2,7 +2,7 @@ import time
 from crawler import fetch_job_detail, fetch_mma_jobs
 from database import extract_job_no, init_db, is_job_exists, save_job
 from llm_parser import parse_job_remark_with_ai
-from notifier import send_telegram_notification
+from notifier import send_pipeline_summary, send_telegram_notification
 
 def run_pipeline():
   """병역일터 수집 -> 중복 검사 -> json 구조화 -> DB 적재 전체 파이프라인을 실행합니다."""
@@ -44,6 +44,8 @@ def run_pipeline():
  
     page += 1  #다음 페이지로 이동
     time.sleep(1)
+
+    send_pipeline_summary(total_new_jobs, total_skipped_jobs)
 
 if __name__ == "__main__":
   # 테스트로 1페이지만 먼저 전체 파이프라인 실행
