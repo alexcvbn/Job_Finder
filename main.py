@@ -42,7 +42,7 @@ def run_pipeline():
             time.sleep(1)
 
         page += 1
-        time.sleep(1)
+        time.sleep(5)
 
     # [수정] while 반복문이 완전히 끝난 후 최종 요약 1회 발송 (들여쓰기 수정)
     print(f"\n파이프라인 완료: 신규 {total_new_jobs}건 / 건너뜀 {total_skipped_jobs}건")
