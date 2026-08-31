@@ -1,73 +1,73 @@
-import json
 import os
+import json
+import re
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
 load_dotenv()
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
+API_KEY = os.getenv("GEMINI_API_KEY")
 
-def parse_job_remark_with_ai(company_name, raw_text):
-  """비정형 공고 비고를 Gemini를 이용해 정형 JSON 데이터로 추출합니다."""
-  if not raw_text.strip():
-    return {}
-
-  prompt = f"""
-    당신은 IT 채용 공고 전문 데이터 분석가입니다.
-    아래는 '{company_name}'의 병무청 채용공고 본문(비고란) 텍스트입니다.
-    이 텍스트를 정밀 분석하여 기술 스택과 채용 조건을 JSON으로 추출하세요.
-
-    [공고 원문]
-    {raw_text}
-
-    [추출 규칙]
-    1. recruit_types: 채용 유형 (예: ["보충역 신규", "보충역 전직", "현역 전직"] 등)
-    2. positions: 모집하는 직무 목록 (예: ["백엔드", "프론트엔드", "iOS", "ML"] 등)
-    3. tech_stacks: 요구하거나 우대하는 기술 스택 키워드 (예: ["Python", "Go", "C++", "Spring"] 등, 없으면 빈 배열)
-    4. apply_url: 외부 지원 링크 URL (본문에 URL이 있으면 추출, 없으면 null)
-    5. summary: 2줄 이내의 핵심 요약
+def parse_job_remark_with_ai(company_name: str, title: str, remark_text: str) -> dict:
     """
-
-  try:
-    # response_mime_type을 지정하여 순수 JSON만 반환하도록 강제
-    response = client.models.generate_content(
-        model="gemini-3.6-flash",
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            temperature=0.1,  # 환각 방지를 위해 가장 보수적인 온도 설정
-        ),
-    )
-
-    # 문자열 응답을 파이썬 딕셔너리로 변환
-    structured_data = json.loads(response.text)
-    return structured_data
-
-  except Exception as e:
-    print(f"ERROR: LLM 파싱 에러: {e}")
-    return {}
-
-
-'''
-if __name__ == "__main__":
-  # 앞서 크롤러가 수집했던 당근마켓 비고란 실제 텍스트 예시
-  sample_danggeun_remark = """
-    1. 채용 유형
-    - 보충역 신규 편입
-    - 보충역 전직 (현 업체 복무 6개월 이상 등 병무청 전직 요건 충족자)
-
-    2. 모집 포지션
-    - 아래 링크의 포지션 전체 (백엔드, 프론트엔드, iOS, Android, ML 등 / 세부 자격 요건은 각 공고 참고)
-    - 기술 스택: Go, Python, TypeScript, Kafka, AWS
-
-    3. 지원 링크: https://about.daangn.com/jobs/
+    병역일터 공고 제목과 상세 요강을 분석하여 구조화된 JSON으로 반환합니다.
     """
+    fallback_result = {
+        "recruit_types": [],
+        "positions": [],
+        "tech_stacks": [],
+        "summary": "상세 요강이 제공되지 않았거나 분석할 수 없는 형식입니다.",
+        "apply_url": None
+    }
 
-  print("당근마켓 공고 AI 분석 중...")
-  result = parse_job_remark_with_ai("당근마켓", sample_danggeun_remark)
+    if not API_KEY:
+        print("[ERROR] GEMINI_API_KEY 환경 변수가 설정되지 않았습니다.")
+        return fallback_result
 
-  print("\n=== ✨ LLM 구조화 추출 결과 ===")
-  print(json.dumps(result, indent=2, ensure_ascii=False))
+    try:
+        client = genai.Client(api_key=API_KEY)
 
-'''
+        prompt = f"""
+다음은 전문연구요원/산업기능요원 채용 공고 정보입니다.
+공고 제목과 본문 내용을 모두 검토하여 아래 JSON 스키마에 맞춰 정확히 JSON 데이터만 출력하세요.
+
+[회사명]: {company_name}
+[공고 제목]: {title}
+[공고 내용]:
+{remark_text}
+
+[출력 요구 JSON 포맷]:
+{{
+  "recruit_types": ["공고 제목이나 본문에서 언급된 현역, 보충역, 전직, 신규 중 해당하는 것만 배열로 선택 (예: ['보충역'])"],
+  "positions": ["백엔드", "프론트엔드", "모바일 앱", "임베디드", "인공지능", "데이터엔지니어", "서버엔지니어", "기타" 중 선택],
+  "tech_stacks": ["C++", "Python", "Java", "Spring Boot", "React Native", "Swift", "Kotlin" 등 언급된 핵심 기술 스택 리스트],
+  "summary": "지원 자격, 담당 업무, 우대 사항을 핵심 위주로 요약한 2~3줄 한국어 설명",
+  "apply_url": "별도 지원 링크/이메일/원티드/사람인 URL이 본문에 있다면 기재, 없으면 null"
+}}
+"""
+
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=0.1
+            )
+        )
+
+        raw_text = response.text.strip()
+        clean_text = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw_text, flags=re.MULTILINE).strip()
+        data = json.loads(clean_text)
+
+        return {
+            "recruit_types": data.get("recruit_types", []),
+            "positions": data.get("positions", []),
+            "tech_stacks": data.get("tech_stacks", []),
+            "summary": data.get("summary", "요약 없음"),
+            "apply_url": data.get("apply_url")
+        }
+
+    except Exception as e:
+        print(f"[ERROR] '{company_name}' LLM 파싱 중 예외 발생: {e}")
+        return fallback_result
