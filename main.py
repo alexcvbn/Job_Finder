@@ -29,7 +29,7 @@ def run_pipeline():
 
             print(f"[새 공고] {job['company']} 처리 중...")
             detail = fetch_job_detail(job["link"])
-            raw_remark = detail.get("remark") or str(detail.get("detail_info", ""))
+            raw_remark = detail.get("remark")
 
             # [수정] job["title"]을 두 번째 인자로 전달
             parsed_data = parse_job_remark_with_ai(job["company"], job["title"], raw_remark)

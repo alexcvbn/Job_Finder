@@ -52,7 +52,7 @@ def is_job_exists(job_no):
 
 
 def save_job(meta_job, parsed_ai_data):
-  """메타 정보와 AI 분석 결과를 DB에 영구 저장합니다."""
+  """메타 정보와 AI 분석 결과를 DB에 영구 저장"""
   job_no = extract_job_no(meta_job["link"])
   if not job_no:
     return False
