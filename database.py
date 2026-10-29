@@ -27,7 +27,18 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+
+    cursor.execute("""
+            CREATE TABLE IF NOT EXISTS job_history (
+                job_no TEXT NOT NULL,
+                observed_on TEXT NOT NULL,
+                PRIMARY KEY (job_no, observed_on)
+            )
+
+        """)
     conn.commit()
+
+
 
 
 def extract_job_no(url):
@@ -81,6 +92,41 @@ def save_job(job, job_analysis):
     conn.commit()
     return True
 
+def save_job_history(job_no, observed_on):
+    """공고를 확인한 날짜를 기록"""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT OR IGNORE INTO job_history (
+                job_no, observed_on
+            ) VALUES (?, ?)
+            """,
+            (job_no, observed_on),
+        )
+        conn.commit()
+
+
+def get_jobs_by_date(observed_on):
+    """지정한 날짜에 확인한 공고 목록을 반환"""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT
+                jobs.job_no,
+                jobs.title,
+                jobs.company,
+                job_history.observed_on
+            FROM job_history
+            JOIN jobs 
+            ON job_history.job_no = jobs.job_no
+            WHERE job_history.observed_on = ?
+            ORDER BY jobs.company, jobs.title
+            """,
+            (observed_on,),
+        )
+        return cursor.fetchall()
 
 if __name__ == "__main__":
   init_db()

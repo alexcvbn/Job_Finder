@@ -3,6 +3,9 @@ from crawler import fetch_job_detail, fetch_mma_jobs
 from database import extract_job_no, init_db, job_exists, save_job
 from llm_parser import parse_job_remark_with_ai
 from notifier import send_pipeline_summary, send_telegram_notification
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from database import save_job_history
 
 def run_pipeline():
     """수집 -> 중복 검사 -> json구조화 -> DB저장 파이프라인 run"""
@@ -10,6 +13,7 @@ def run_pipeline():
     page = 1
     total_new_jobs = 0
     total_existing_jobs = 0
+    observed_on = datetime.now(ZoneInfo("Asia/Seoul")).date().isoformat()
     print("파이프라인 시작\n")
 
     while True:
@@ -24,6 +28,7 @@ def run_pipeline():
             job_no = extract_job_no(job["link"])
 
             if job_exists(job_no):
+                save_job_history(job_no, observed_on)
                 total_existing_jobs += 1
                 continue
 
@@ -32,7 +37,8 @@ def run_pipeline():
             remark_text = detail.get("remark")
 
             job_analysis = parse_job_remark_with_ai(job["company"], job["title"], remark_text)
-            save_job(job, job_analysis)
+            if save_job(job, job_analysis):
+                save_job_history(job_no, observed_on)
             send_telegram_notification(job, job_analysis)
             total_new_jobs += 1
             time.sleep(1)
