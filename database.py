@@ -63,8 +63,8 @@ def save_job(meta_job, parsed_ai_data):
         """
             INSERT OR IGNORE INTO jobs (
                 job_no, company, title, deadline, link,
-                recruit_types, positions, tech_stacks, summary
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                positions, tech_stacks, summary
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             job_no,
@@ -72,9 +72,6 @@ def save_job(meta_job, parsed_ai_data):
             meta_job.get("title", ""),
             meta_job.get("deadline", ""),
             meta_job.get("link", ""),
-            json.dumps(
-                parsed_ai_data.get("recruit_types", []), ensure_ascii=False
-            ),
             json.dumps(parsed_ai_data.get("positions", []), ensure_ascii=False),
             json.dumps(
                 parsed_ai_data.get("tech_stacks", []), ensure_ascii=False

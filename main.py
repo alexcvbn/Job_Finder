@@ -31,7 +31,6 @@ def run_pipeline():
             detail = fetch_job_detail(job["link"])
             raw_remark = detail.get("remark")
 
-            # [수정] job["title"]을 두 번째 인자로 전달
             parsed_data = parse_job_remark_with_ai(job["company"], job["title"], raw_remark)
             save_job(job, parsed_data)
             send_telegram_notification(job, parsed_data)
@@ -42,7 +41,7 @@ def run_pipeline():
         time.sleep(5)
 
     # [수정] while 반복문이 완전히 끝난 후 최종 요약 1회 발송 (들여쓰기 수정)
-    print(f"\n파이프라인 완료: 신규 {total_new_jobs}건 / 건너뜀 {total_skipped_jobs}건")
+    print(f"\n파이프라인 완료: 신규 {total_new_jobs}건 / 기존 {total_skipped_jobs}건")
     send_pipeline_summary(total_new_jobs, total_skipped_jobs)
 
 if __name__ == "__main__":
