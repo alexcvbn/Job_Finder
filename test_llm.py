@@ -16,7 +16,7 @@ client = genai.Client(api_key=api_key)
 
 # 3. 모델로 테스트
 response = client.models.generate_content(
-    model="gemini-3.6-flash",
+    model="gemini-3.8-flash",
     contents="안녕 너와 정상적으로 연결되었는지 한 문장으로 대답해줘.",
 )
 

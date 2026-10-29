@@ -21,7 +21,6 @@ def init_db():
                 title TEXT NOT NULL,
                 deadline TEXT,
                 link TEXT,
-                recruit_types TEXT,
                 positions TEXT,
                 tech_stacks TEXT,
                 summary TEXT,
@@ -38,7 +37,7 @@ def extract_job_no(url):
   return params.get("cygonggo_no", [None])[0]
 
 
-def is_job_exists(job_no):
+def job_exists(job_no):
   """중복 방지를 위해 db 확인."""
   if not job_no:
     return False
@@ -51,9 +50,9 @@ def is_job_exists(job_no):
     return cursor.fetchone() is not None
 
 
-def save_job(meta_job, parsed_ai_data):
+def save_job(job, job_analysis):
   """메타 정보와 AI 분석 결과를 DB에 영구 저장"""
-  job_no = extract_job_no(meta_job["link"])
+  job_no = extract_job_no(job["link"])
   if not job_no:
     return False
 
@@ -68,15 +67,15 @@ def save_job(meta_job, parsed_ai_data):
         """,
         (
             job_no,
-            meta_job.get("company", ""),
-            meta_job.get("title", ""),
-            meta_job.get("deadline", ""),
-            meta_job.get("link", ""),
-            json.dumps(parsed_ai_data.get("positions", []), ensure_ascii=False),
+            job.get("company", ""),
+            job.get("title", ""),
+            job.get("deadline", ""),
+            job.get("link", ""),
+            json.dumps(job_analysis.get("positions", []), ensure_ascii=False),
             json.dumps(
-                parsed_ai_data.get("tech_stacks", []), ensure_ascii=False
+                job_analysis.get("tech_stacks", []), ensure_ascii=False
             ),
-            parsed_ai_data.get("summary", ""),
+            job_analysis.get("summary", ""),
         ),
     )
     conn.commit()

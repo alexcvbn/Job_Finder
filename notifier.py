@@ -8,26 +8,26 @@ BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 
-def send_telegram_notification(job_meta, parsed_data):
+def send_telegram_notification(job, job_analysis):
   """새로 감지된 채용 공고를 텔레그램 봇으로 전송"""
   if not BOT_TOKEN or not CHAT_ID:
     return False
 
   url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 
-  company = job_meta.get("company", "회사명 미상")
-  title = job_meta.get("title", "공고 제목 없음")
-  deadline = job_meta.get("deadline", "deadline 미상")
-  link = job_meta.get("link", "")
+  company = job.get("company", "회사명 미상")
+  title = job.get("title", "공고 제목 없음")
+  deadline = job.get("deadline", "deadline 미상")
+  link = job.get("link", "")
 
-  tech_stacks = parsed_data.get("tech_stacks", [])
+  tech_stacks = job_analysis.get("tech_stacks", [])
   stacks_str = ", ".join(tech_stacks) if tech_stacks else "정보 없음"
 
 
-  positions = parsed_data.get("positions", [])
+  positions = job_analysis.get("positions", [])
   positions_str = ", ".join(positions) if positions else "정보 없음"
 
-  summary = parsed_data.get("summary", "AI 요약 없음")
+  summary = job_analysis.get("summary", "AI 요약 없음")
 
   message = f"""<b>[병역일터] 신규 공고 등록</b>
 
@@ -59,7 +59,7 @@ def send_telegram_notification(job_meta, parsed_data):
     return False
 
 
-def send_pipeline_summary(total_new_jobs, total_skipped_jobs):
+def send_pipeline_summary(total_new_jobs, total_existing_jobs):
   """수집 작업 종료 시 최종 결과를 텔레그램으로 회신합니다."""
   if not BOT_TOKEN or not CHAT_ID:
     return False
@@ -69,12 +69,12 @@ def send_pipeline_summary(total_new_jobs, total_skipped_jobs):
   if total_new_jobs == 0:
     message = (
         "[수집 완료] 새로 등록된 공고가 없습니다. (기존 공고"
-        f" {total_skipped_jobs}건 확인)"
+        f" {total_existing_jobs}건 확인)"
     )
   else:
     message = (
         f"[수집 완료] 총 {total_new_jobs}건의 신규 공고가 등록되었습니다."
-        f" (기존 공고: {total_skipped_jobs}건)"
+        f" (기존 공고: {total_existing_jobs}건)"
     )
 
   payload = {"chat_id": CHAT_ID, "text": message, "parse_mode": "HTML"}
