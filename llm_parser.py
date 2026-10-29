@@ -7,7 +7,7 @@ from google.genai import types
 
 load_dotenv()
 
-API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 def parse_job_remark_with_ai(company_name: str, title: str, remark_text: str) -> dict:
     """
@@ -19,12 +19,12 @@ def parse_job_remark_with_ai(company_name: str, title: str, remark_text: str) ->
         "summary": "상세 요강이 제공되지 않았거나 분석할 수 없는 형식입니다."
     }
 
-    if not API_KEY:
+    if not GEMINI_API_KEY:
         print("[ERROR] GEMINI_API_KEY가 설정되지 않았습니다.")
         return fallback_result
 
     try:
-        client = genai.Client(api_key=API_KEY)
+        client = genai.Client(api_key=GEMINI_API_KEY)
 
         prompt = f"""
 다음은 보충역 산업기능요원 채용 공고 정보입니다.
