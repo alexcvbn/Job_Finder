@@ -5,32 +5,29 @@ from llm_parser import parse_job_remark_with_ai
 from notifier import send_pipeline_summary, send_telegram_notification
 
 def run_pipeline():
-    """병역일터 수집 -> 중복 검사 -> json 구조화 -> DB 적재 전체 파이프라인을 실행합니다."""
+    """수집 -> 중복 검사 -> json구조화 -> DB저장 파이프라인 run"""
     init_db()
-
     page = 1
     total_new_jobs = 0
     total_skipped_jobs = 0
-
-    print("공고 자동 수집 및 AI 분석 파이프라인 시작\n")
+    print("파이프라인 시작\n")
 
     while True:
         print(f"\n[{page} 페이지] 공고 목록 조회 중...")
         jobs = fetch_mma_jobs(page_index=page)
 
-        # 더 이상 가져올 공고가 없으면 반복문 탈출
         if not jobs:
-            print("   -> 마지막 페이지에 도달했습니다. 수집을 종료합니다.")
+            print("수집 파이프라인 종료.")
             break
 
         for job in jobs:
             job_no = extract_job_no(job["link"])
+
             if is_job_exists(job_no):
-                print(f"[건너뜀] {job['company']}")
                 total_skipped_jobs += 1
                 continue
 
-            print(f"[새 공고] {job['company']} AI 분석 중...")
+            print(f"[새 공고] {job['company']} 처리 중...")
             detail = fetch_job_detail(job["link"])
             raw_remark = detail.get("remark") or str(detail.get("detail_info", ""))
 

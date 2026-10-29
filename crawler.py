@@ -18,17 +18,34 @@ HEADERS = {
     "Content-Type": "application/x-www-form-urlencoded",
 }
 
-
+'''
+## 정보처리와 게임sw 조회 payloads
+MIME Type: application/x-www-form-urlencoded
+ar_eopjong_gbcd: 11111,11112
+eopjong_gbcd_list: 11111,11112
+ar_bokrihs_cd
+bokrihs_cd_list
+eopjong_gbcd: 1
+gegyumo_cd
+eopjong_cd: 11111
+eopjong_cd: 11112
+eopche_nm
+sido_addr
+sigungu_addr
+cyjemok_nm
+yeokjong_brcd: 002
+gyjogeon_cd
+'''
 def fetch_mma_jobs(page_index=1):
-  """목록 페이지에서 공고 메타데이터(제목, 회사명, 마감일, 상세링크) 목록을 가져옵니다."""
+  """목록 페이지에서 공고 메타데이터 목록 패치."""
   payload = {
-      "pageIndex": str(page_index),
       "pageUnit": "10",
+      "pageIndex": str(page_index),
       "eopjong_gbcd": "1",
       "ar_eopjong_gbcd": "11111,11112",
       "eopjong_gbcd_list": "11111,11112",
-      "sido_addr": "서울특별시",
-      "yeokjong_brcd": "002",
+      "sido_addr": "",
+      "yeokjong_brcd": "002", #보충역 정보
       "ar_bokrihs_cd": "",
       "bokrihs_cd_list": "",
       "gegyumo_cd": "",
@@ -44,6 +61,7 @@ def fetch_mma_jobs(page_index=1):
 
     soup = BeautifulSoup(response.text, "html.parser")
     table = soup.find("table", class_="brd_list_n")
+
     if not table:
       return []
 
@@ -56,11 +74,10 @@ def fetch_mma_jobs(page_index=1):
 
     for row in rows:
       cols = row.find_all("td")
-      if len(cols) < 5:
-        continue
 
       title_tag = cols[0].find("a")
       title = title_tag.get_text(strip=True) if title_tag else ""
+
       relative_link = title_tag["href"] if title_tag else ""
       full_link = BASE_URL + relative_link if relative_link else ""
 
@@ -85,11 +102,10 @@ def fetch_mma_jobs(page_index=1):
 
 def fetch_job_detail(detail_url):
     """
-    상세 페이지에서 [비고 사항] 테이블 내부의 전체 텍스트(직무, 기술스택, 지원링크 등)를
-    누락 없이 정확하게 추출합니다.
+    상세 페이지에서 [비고 사항] 테이블 내부의 전체 텍스트 추출.
     """
     if not detail_url:
-        return {"remark": "", "detail_info": {}, "raw_content": ""}
+        return {"remark": ""}
 
     try:
         response = requests.get(detail_url, headers=HEADERS, timeout=10)
@@ -98,38 +114,20 @@ def fetch_job_detail(detail_url):
 
         remark_text = ""
 
-        # 1. <caption> 태그 내 '비고' 텍스트로 테이블 탐색 (공백 영향 전혀 없음)
-        for cap in soup.find_all("caption"):
-            if "비고" in cap.get_text():
-                target_table = cap.find_parent("table")
-                if target_table:
-                    remark_text = target_table.get_text(separator="\n", strip=True)
-                    break
+        remark_tag = soup.select_one('table[summary*="비고"]')
+        if remark_tag is None:
+          remark_text = ""
 
-        # 2. summary 속성에 '비고'가 포함된 테이블 탐색 (와일드카드 부분 일치)
-        if not remark_text:
-            target_table = soup.select_one('table[summary*="비고"]')
-            if target_table:
-                remark_text = target_table.get_text(separator="\n", strip=True)
-
-        # 3. <h3>비  고</h3> 바로 뒤에 오는 테이블 탐색
-        if not remark_text:
-            for h in soup.find_all(["h3", "h4"]):
-                if "비" in h.get_text() and "고" in h.get_text():
-                    tbl = h.find_next("table")
-                    if tbl:
-                        remark_text = tbl.get_text(separator="\n", strip=True)
-                        break
+        else:
+          remark_text = remark_tag.get_text(separator="\n", strip=True)
 
         return {
-            "remark": remark_text,
-            "detail_info": {},
-            "raw_content": remark_text
+            "remark": remark_text
         }
 
     except Exception as e:
         print(f"  [상세 수집 실패] {detail_url} -> 에러: {e}")
-        return {"remark": "", "detail_info": {}, "raw_content": ""}
+        return {"remark": ""}
 
 
 # 👈 [추가 2] 수집과 AI 파싱을 직렬로 연결한 실행 블록
